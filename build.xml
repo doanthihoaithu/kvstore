@@ -1,0 +1,164 @@
+<?xml version="1.0"?>
+
+<!-- ======================================================================= -->
+<!-- Ant Build File for KVStore Examples                                     -->
+<!--                                                                         -->
+<!-- Compile the examples source code.                                       -->
+<!--                                                                         -->
+<!-- Builds all of the examples that can be used with a given Oracle
+     NoSQL Database installation.  By default, this build script assumes that
+     the examples have been installed within an existing NoSQL installation.
+     If that is not the case, you should set the kvlib property to the
+     directory containing the JAR files for the NoSQL installation you want to
+     use.                                                                    -->
+<!--                                                                         -->
+<!-- Some examples require JAR files that may not be available in all
+     installations, or that must be supplied separately.  These examples and
+     dependencies are:
+
+     * The coherence example requires an EE installation as well as setting the
+       coherencelib property to a directory containing the Coherence JAR file
+       as provided by a Coherence installation
+
+     * The externaltables example requires an EE installation
+
+     * The jmx example requires a CE or EE installation
+
+     * The hadoop example requires setting the hadooplib property to a
+       directory containing the Hadoop JAR files
+
+     * The pubsub example requires an EE installation
+
+     If the requirements are not met, then the source code for the associated
+     examples will not be built.                                             -->
+<!-- ======================================================================= -->
+
+<project name="kv-examples" default="compile-examples" basedir="." >
+    <description>Compile KVStore Examples</description>
+
+    <property name="example.srcdir" value="${basedir}/examples"/>
+    <property name="example.builddir" value="build"/>
+    <property name="example.destdir" value="${example.builddir}/examples/classes"/>
+    <property name="build.debug" value="on"/>
+    <property name="build.deprecation" value="off"/>
+
+    <!-- The directory containing the KV JAR files, defaults to lib
+         directory of the containing installation -->
+    <property name="kvlib" value="${basedir}/../../lib"/>
+
+    <!-- Checks if required jars exist for some examples -->
+    <available file="${kvlib}/kvclient.jar" property="kvlib-valid"/>
+    <available file="${kvlib}/kvcoherence.jar" property="kvcoherence-exists"/>
+    <available file="${kvlib}/kvstore-ee.jar" property="kvstore-ee-exists"/>
+    <available file="${kvlib}/kvstore.jar" property="kvstore-exists"/>
+
+    <!-- Exclude some examples if the jars are not found -->
+    <condition property="coherence.exclude" value="" else="**/coherence/** ">
+        <and>
+            <isset property="kvcoherence-exists"/>
+            <isset property="coherencelib"/>
+        </and>
+    </condition>
+    <condition property="externaltables.exclude" value="" else="**/externaltables/** ">
+        <isset property="kvstore-ee-exists"/>
+    </condition>
+    <condition property="jmx.exclude" value="" else="**/jmx/** ">
+        <isset property="kvstore-exists"/>
+    </condition>
+    <condition property="hadoop.exclude" value="" else="**/hadoop/** ">
+        <isset property="hadooplib"/>
+    </condition>
+    <condition property="pubsub.exclude" value="" else="**/pubsub/** ">
+        <isset property="kvstore-ee-exists"/>
+    </condition>
+
+    <!-- KV lib path -->
+    <path id="examples.kv.classpath">
+        <fileset dir="${kvlib}">
+            <include name="**/**.jar"/>
+        </fileset>
+    </path>
+
+    <!-- sanity check that the kvclient.jar is under the lib directory -->
+    <target name="check-kvlib">
+        <fail unless="kvlib-valid">
+${kvlib} is not a valid Oracle NoSQL Database lib directory
+
+We recommend to install the examples inside an Oracle NoSQL Database
+CE/EE/Client installation (e.g., under &lt;path to installation&gt;/kv/).
+Otherwise, the kvlib property needs to be set to the pathname of the lib
+subdirectory of an installation (e.g., -Dkvlib=&lt;path to
+installation&gt;/kv/lib)in order to use this build script.
+        </fail>
+    </target>
+
+    <target name="dep-dirs">
+        <mkdir dir="${example.destdir}"/>
+    </target>
+
+    <!-- Set hadoop lib path -->
+    <target name="-set-with-hadoop-lib" if="hadooplib">
+        <path id="examples.hadoop.classpath">
+            <fileset dir="${hadooplib}">
+                <include name="*.jar"/>
+            </fileset>
+        </path>
+    </target>
+
+    <target name="-set-without-hadoop-lib" unless="hadooplib">
+        <path id="examples.hadoop.classpath">
+        </path>
+    </target>
+
+    <!-- Set coherence lib path -->
+    <target name="-set-with-coherence-lib" if="coherencelib">
+        <path id="examples.coherence.classpath">
+            <fileset dir="${coherencelib}">
+                <include name="*.jar"/>
+            </fileset>
+        </path>
+    </target>
+
+    <target name="-set-without-coherence-lib" unless="coherencelib">
+        <path id="examples.coherence.classpath">
+        </path>
+    </target>
+
+    <!-- The build target -->
+    <target name="compile-examples" depends="
+        check-kvlib,
+        -set-with-hadoop-lib,
+        -set-without-hadoop-lib,
+        -set-with-coherence-lib,
+        -set-without-coherence-lib,
+        dep-dirs">
+
+        <path id="examples.classpath">
+            <path refid="examples.kv.classpath"/>
+            <path refid="examples.hadoop.classpath"/>
+            <path refid="examples.coherence.classpath"/>
+        </path>
+
+        <javac
+            srcdir="${example.srcdir}"
+            destdir="${example.destdir}"
+            includeantruntime="true"
+            debug="${build.debug}"
+            deprecation="${build.deprecation}"
+            optimize="on"
+            classpathref="examples.classpath"
+            excludes="${coherence.exclude}${externaltables.exclude}
+                     ${jmx.exclude}${hadoop.exclude}${pubsub.exclude}">
+        </javac>
+
+        <copy todir="${example.destdir}/table"
+            file="${example.srcdir}/table/person_contacts.json"/>
+    </target>
+
+    <target name="clean" depends="clean-examples"/>
+
+    <target name="clean-examples">
+        <delete dir="${example.builddir}" failonerror="false"/>
+    </target>
+
+</project>
