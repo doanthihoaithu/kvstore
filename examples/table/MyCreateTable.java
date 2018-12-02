@@ -212,15 +212,15 @@ public class MyCreateTable extends BaseExample {
             Table parentTable = getTable("countries");
             Table childTable = parentTable.getChildTable("students");
             Row row = parentTable.createRow();
-//            Country country = new Country();
-//            for (int i =1; i <= Country.codes.length-1;i++) {
-//
-//                country.setInformationById(i);
-//                row.put("country_name", country.getcountryName());
-//                row.put("country_code", country.getcountryCode());
-//                row.put("country_id",i);
-//                getTableAPI().put(row, null, null);
-//            }
+            Country country = new Country();
+            for (int i =1; i <= Country.codes.length-1;i++) {
+
+                country.setInformationById(i);
+                row.put("country_name", country.getcountryName());
+                row.put("country_code", country.getcountryCode());
+                row.put("country_id",i);
+                getTableAPI().put(row, null, null);
+            }
             long begin = System.currentTimeMillis();
             Student student = new Student();
             for (int i = startId; i <= endId; i++) {
